@@ -11,7 +11,7 @@ import { defaultEmbeddingModel } from "$lib/server/embeddingModels";
 const userData = {
 	preferred_username: "new-username",
 	name: "name",
-	picture: "https://example.com/avatar.png",
+	picture: z.string().optional(),
 	sub: "1234567890",
 };
 Object.freeze(userData);

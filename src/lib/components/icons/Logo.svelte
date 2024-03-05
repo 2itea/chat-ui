@@ -24,5 +24,6 @@
 		class={classNames}
 		alt="{PUBLIC_APP_NAME} logo"
 		src="{PUBLIC_ORIGIN || $page.url.origin}{base}/{PUBLIC_APP_ASSETS}/logo.svg"
+		style="width: 50px;margin-right: 10px;"
 	/>
 {/if}
