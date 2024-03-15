@@ -120,7 +120,7 @@ TEXT_EMBEDDING_MODELS = `[
 ```
 
 The required fields are `name`, `chunkCharLength` and `endpoints`.
-Supported text embedding backends are: [`transformers.js`](https://huggingface.co/docs/transformers.js) and [`TEI`](https://github.com/huggingface/text-embeddings-inference). `transformers.js` models run locally as part of `chat-ui`, whereas `TEI` models run in a different environment & accessed through an API endpoint.
+Supported text embedding backends are: [`transformers.js`](https://huggingface.co/docs/transformers.js), [`TEI`](https://github.com/huggingface/text-embeddings-inference) and [`OpenAI`](https://platform.openai.com/docs/guides/embeddings). `transformers.js` models run locally as part of `chat-ui`, whereas `TEI` models run in a different environment & accessed through an API endpoint. `openai` models are accessed through the [OpenAI API](https://platform.openai.com/docs/guides/embeddings).
 
 When more than one embedding models are supplied in `.env.local` file, the first will be used by default, and the others will only be used on LLM's which configured `embeddingModel` to the name of the model.
 
@@ -453,6 +453,51 @@ MODELS=`[
          "type": "ollama",
          "url" : "http://127.0.0.1:11434",
          "ollamaName" : "mistral"
+        }
+      ]
+  }
+]`
+```
+
+#### Anthropic
+
+We also support Anthropic models through the official SDK. You may provide your API key via the `ANTHROPIC_API_KEY` env variable, or alternatively, through the `endpoints.apiKey` as per the following example.
+
+```
+MODELS=`[
+  {
+      "name": "claude-3-sonnet-20240229",
+      "displayName": "Claude 3 Sonnet",
+      "description": "Ideal balance of intelligence and speed",
+      "parameters": {
+        "max_new_tokens": 4096,
+      },
+      "endpoints": [
+        {
+          "type": "anthropic",
+          // optionals
+          "apiKey": "sk-ant-...",
+          "baseURL": "https://api.anthropic.com",
+          defaultHeaders: {},
+          defaultQuery: {}
+        }
+      ]
+  },
+  {
+      "name": "claude-3-opus-20240229",
+      "displayName": "Claude 3 Opus",
+      "description": "Most powerful model for highly complex tasks",
+      "parameters": {
+         "max_new_tokens": 4096
+      },
+      "endpoints": [
+        {
+          "type": "anthropic",
+          // optionals
+          "apiKey": "sk-ant-...",
+          "baseURL": "https://api.anthropic.com",
+          defaultHeaders: {},
+          defaultQuery: {}
         }
       ]
   }

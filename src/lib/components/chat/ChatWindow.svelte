@@ -138,7 +138,7 @@
 		bind:this={chatContainer}
 	>
 		<div class="mx-auto flex h-full max-w-3xl flex-col gap-6 px-5 pt-6 sm:gap-8 xl:max-w-4xl">
-			{#if $page.data?.assistant}
+			{#if $page.data?.assistant && !!messages.length}
 				<a
 					class="mx-auto flex items-center gap-1.5 rounded-full border border-gray-100 bg-gray-50 py-1 pl-1 pr-3 text-sm text-gray-800 hover:bg-gray-100 dark:border-gray-800 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
 					href="{base}/settings/assistants/{$page.data.assistant._id}"
@@ -195,9 +195,30 @@
 					model={currentModel}
 				/>
 			{:else if !assistant}
-				<ChatIntroduction {models} {currentModel} on:message />
+				<ChatIntroduction
+					{models}
+					{currentModel}
+					on:message={(ev) => {
+						if ($page.data.loginRequired) {
+							ev.preventDefault();
+							loginModalOpen = true;
+						} else {
+							dispatch("message", ev.detail);
+						}
+					}}
+				/>
 			{:else}
-				<AssistantIntroduction {assistant} on:message />
+				<AssistantIntroduction
+					{assistant}
+					on:message={(ev) => {
+						if ($page.data.loginRequired) {
+							ev.preventDefault();
+							loginModalOpen = true;
+						} else {
+							dispatch("message", ev.detail);
+						}
+					}}
+				/>
 			{/if}
 		</div>
 		<ScrollToBottomBtn
