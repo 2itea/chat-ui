@@ -9,11 +9,14 @@
 	import { base } from "$app/paths";
 	import CarbonPen from "~icons/carbon/pen";
 	import CarbonUpload from "~icons/carbon/upload";
+	import CarbonHelpFilled from "~icons/carbon/help";
+	import CarbonSettingsAdjust from "~icons/carbon/settings-adjust";
 
 	import { useSettingsStore } from "$lib/stores/settings";
 	import { isHuggingChat } from "$lib/utils/isHuggingChat";
 	import IconInternet from "./icons/IconInternet.svelte";
 	import TokensCounter from "./TokensCounter.svelte";
+	import HoverTooltip from "./HoverTooltip.svelte";
 
 	type ActionData = {
 		error: boolean;
@@ -31,16 +34,22 @@
 
 	let files: FileList | null = null;
 	const settings = useSettingsStore();
-	let modelId =
-		assistant?.modelId ?? models.find((_model) => _model.id === $settings.activeModel)?.name;
+	let modelId = "";
 	let systemPrompt = assistant?.preprompt ?? "";
 	let dynamicPrompt = assistant?.dynamicPrompt ?? false;
+	let showModelSettings = Object.values(assistant?.generateSettings ?? {}).some((v) => !!v);
 
 	let compress: typeof readAndCompressImage | null = null;
 
 	onMount(async () => {
 		const module = await import("browser-image-resizer");
 		compress = module.readAndCompressImage;
+
+		if (assistant) {
+			modelId = assistant.modelId;
+		} else {
+			modelId = models.find((model) => model.id === $settings.activeModel)?.id ?? models[0].id;
+		}
 	});
 
 	let inputMessage1 = assistant?.exampleInputs[0] ?? "";
@@ -89,11 +98,12 @@
 
 	const regex = /{{\s?url=(.+?)\s?}}/g;
 	$: templateVariables = [...systemPrompt.matchAll(regex)].map((match) => match[1]);
+	$: selectedModel = models.find((m) => m.id === modelId);
 </script>
 
 <form
 	method="POST"
-	class="flex h-full flex-col overflow-y-auto p-4 md:p-8"
+	class="relative flex h-full flex-col overflow-y-auto p-4 md:p-8"
 	enctype="multipart/form-data"
 	use:enhance={async ({ formData }) => {
 		loading = true;
@@ -246,21 +256,122 @@
 
 			<label>
 				<div class="mb-1 font-semibold">Model</div>
-				<select
-					name="modelId"
-					class="w-full rounded-lg border-2 border-gray-200 bg-gray-100 p-2"
-					bind:value={modelId}
+				<div class="flex gap-2">
+					<select
+						name="modelId"
+						class="w-full rounded-lg border-2 border-gray-200 bg-gray-100 p-2"
+						bind:value={modelId}
+					>
+						{#each models.filter((model) => !model.unlisted) as model}
+							<option value={model.id}>{model.displayName}</option>
+						{/each}
+						<p class="text-xs text-red-500">{getError("modelId", form)}</p>
+					</select>
+					<button
+						type="button"
+						class="flex aspect-square items-center gap-2 whitespace-nowrap rounded-lg border px-3 {showModelSettings
+							? 'border-blue-500/20 bg-blue-50 text-blue-600'
+							: ''}"
+						on:click={() => (showModelSettings = !showModelSettings)}
+						><CarbonSettingsAdjust class="text-xs" /></button
+					>
+				</div>
+				<div
+					class="mt-2 rounded-lg border border-blue-500/20 bg-blue-500/5 px-2 py-0.5"
+					class:hidden={!showModelSettings}
 				>
-					{#each models.filter((model) => !model.unlisted) as model}
-						<option
-							value={model.id}
-							selected={assistant
-								? assistant?.modelId === model.id
-								: $settings.activeModel === model.id}>{model.displayName}</option
-						>
-					{/each}
-					<p class="text-xs text-red-500">{getError("modelId", form)}</p>
-				</select>
+					<p class="text-xs text-red-500">{getError("inputMessage1", form)}</p>
+					<div class="my-2 grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:grid-rows-2">
+						<label for="temperature" class="flex justify-between">
+							<span class="m-1 ml-0 flex items-center gap-1.5 whitespace-nowrap text-sm">
+								Temperature
+
+								<HoverTooltip
+									label="Temperature: Controls creativity, higher values allow more variety."
+								>
+									<CarbonHelpFilled
+										class="inline text-xxs text-gray-500 group-hover/tooltip:text-blue-600"
+									/>
+								</HoverTooltip>
+							</span>
+							<input
+								type="number"
+								name="temperature"
+								min="0.1"
+								max="2"
+								step="0.1"
+								class="w-20 rounded-lg border-2 border-gray-200 bg-gray-100 px-2 py-1"
+								placeholder={selectedModel?.parameters?.temperature?.toString() ?? "1"}
+								value={assistant?.generateSettings?.temperature ?? ""}
+							/>
+						</label>
+						<label for="top_p" class="flex justify-between">
+							<span class="m-1 ml-0 flex items-center gap-1.5 whitespace-nowrap text-sm">
+								Top P
+								<HoverTooltip
+									label="Top P: Sets word choice boundaries, lower values tighten focus."
+								>
+									<CarbonHelpFilled
+										class="inline text-xxs text-gray-500 group-hover/tooltip:text-blue-600"
+									/>
+								</HoverTooltip>
+							</span>
+
+							<input
+								type="number"
+								name="top_p"
+								class="w-20 rounded-lg border-2 border-gray-200 bg-gray-100 px-2 py-1"
+								min="0.05"
+								max="1"
+								step="0.05"
+								placeholder={selectedModel?.parameters?.top_p?.toString() ?? "1"}
+								value={assistant?.generateSettings?.top_p ?? ""}
+							/>
+						</label>
+						<label for="repetition_penalty" class="flex justify-between">
+							<span class="m-1 ml-0 flex items-center gap-1.5 whitespace-nowrap text-sm">
+								Repetition penalty
+								<HoverTooltip
+									label="Repetition penalty: Prevents reuse, higher values decrease repetition."
+								>
+									<CarbonHelpFilled
+										class="inline text-xxs text-gray-500 group-hover/tooltip:text-blue-600"
+									/>
+								</HoverTooltip>
+							</span>
+							<input
+								type="number"
+								name="repetition_penalty"
+								min="0.1"
+								max="2"
+								class="w-20 rounded-lg border-2 border-gray-200 bg-gray-100 px-2 py-1"
+								placeholder={selectedModel?.parameters?.repetition_penalty?.toString() ?? "1.0"}
+								value={assistant?.generateSettings?.repetition_penalty ?? ""}
+							/>
+						</label>
+						<label for="top_k" class="flex justify-between">
+							<span class="m-1 ml-0 flex items-center gap-1.5 whitespace-nowrap text-sm">
+								Top K <HoverTooltip
+									label="Top K: Restricts word options, lower values for predictability."
+								>
+									<CarbonHelpFilled
+										class="inline text-xxs text-gray-500 group-hover/tooltip:text-blue-600"
+									/>
+								</HoverTooltip>
+							</span>
+							<input
+								type="number"
+								name="top_k"
+								min="5"
+								max="100"
+								step="5"
+								class="w-20 rounded-lg border-2 border-gray-200 bg-gray-100 px-2 py-1"
+								placeholder={selectedModel?.parameters?.top_k?.toString() ?? "50"}
+								value={assistant?.generateSettings?.top_k ?? ""}
+							/>
+						</label>
+					</div>
+				</div>
 			</label>
 
 			<label>
@@ -415,7 +526,7 @@
 			{/if}
 		</div>
 
-		<div class="col-span-1 flex h-full flex-col">
+		<div class="relative col-span-1 flex h-full flex-col">
 			<div class="mb-1 flex justify-between text-sm">
 				<span class="font-semibold"> Instructions (System Prompt) </span>
 				{#if dynamicPrompt && templateVariables.length}
@@ -461,26 +572,25 @@
 
 				<p class="text-xs text-red-500">{getError("preprompt", form)}</p>
 			</div>
-		</div>
-
-		<div class="fixed bottom-6 right-6 ml-auto mt-6 flex w-fit justify-end gap-2 sm:absolute">
-			<a
-				href={assistant ? `${base}/settings/assistants/${assistant?._id}` : `${base}/settings`}
-				class="flex items-center justify-center rounded-full bg-gray-200 px-5 py-2 font-semibold text-gray-600"
-			>
-				Cancel
-			</a>
-			<button
-				type="submit"
-				disabled={loading}
-				aria-disabled={loading}
-				class="flex items-center justify-center rounded-full bg-black px-8 py-2 font-semibold"
-				class:bg-gray-200={loading}
-				class:text-gray-600={loading}
-				class:text-white={!loading}
-			>
-				{assistant ? "Save" : "Create"}
-			</button>
+			<div class="absolute bottom-6 flex w-full justify-end gap-2 md:right-0 md:w-fit">
+				<a
+					href={assistant ? `${base}/settings/assistants/${assistant?._id}` : `${base}/settings`}
+					class="flex items-center justify-center rounded-full bg-gray-200 px-5 py-2 font-semibold text-gray-600"
+				>
+					Cancel
+				</a>
+				<button
+					type="submit"
+					disabled={loading}
+					aria-disabled={loading}
+					class="flex items-center justify-center rounded-full bg-black px-8 py-2 font-semibold"
+					class:bg-gray-200={loading}
+					class:text-gray-600={loading}
+					class:text-white={!loading}
+				>
+					{assistant ? "Save" : "Create"}
+				</button>
+			</div>
 		</div>
 	</div>
 </form>
