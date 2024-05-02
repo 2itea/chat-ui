@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { EmbeddingEndpoint, Embedding } from "../embeddingEndpoints";
 import { chunk } from "$lib/utils/chunk";
 import { HF_TOKEN } from "$env/static/private";
+import { logger } from "$lib/server/logger";
 
 export const embeddingEndpointTeiParametersSchema = z.object({
 	weight: z.number().int().positive().default(1),
@@ -25,8 +26,13 @@ const getModelInfoByUrl = async (url: string, authorization?: string) => {
 		},
 	});
 
-	const json = await response.json();
-	return json;
+	try {
+		const json = await response.json();
+		return { max_client_batch_size: 32, max_batch_tokens: 16384, ...json };
+	} catch {
+		logger.debug("Could not get info from TEI embedding endpoint. Using defaults.");
+		return { max_client_batch_size: 32, max_batch_tokens: 16384 };
+	}
 };
 
 export async function embeddingEndpointTei(
